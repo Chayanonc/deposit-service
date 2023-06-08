@@ -6,4 +6,6 @@ export class RequestDeposit {
   status?: string;
   old_balance: string;
   new_balance: string;
+  transactionId: string
+
 }

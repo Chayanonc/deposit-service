@@ -22,27 +22,41 @@ export class DepositService {
     private readonly consumerService: ConsumerService,
     private readonly depositRepository: DepositRepository,
     private readonly producerService: ProducerService,
-  ) {}
+  ) { }
 
-  async depositProcess(data: IDepositProcess) {
-    console.log(data);
+  async depositProcess(data: any) {
+    let accountNumber;
+    let balance;
+    let newBalance;
+    let topic;
+    if (data.payment_type === 'transfer') {
+      accountNumber = data.to_account.account_number
+      balance = data.to_account.old_balance
+      newBalance = Number(balance) + Number(data.amount)
+      data.to_account.new_balance = newBalance;
+      topic = 'transfer_account_update_balance';
+    } else {
+      accountNumber = data.account_number
+      balance = data.balance;
+      newBalance = Number(balance) + Number(data.amount)
+      topic = 'account_update_balance';
+    }
     const deposit = await this.depositRepository.createDeposit({
-      account_number: data.account_number,
-      old_balance: data.balance,
-      new_balance: (Number(data.balance) + Number(data.amount)).toString(),
+      account_number: accountNumber,
+      old_balance: balance,
+      new_balance: newBalance,
       uuid: '0001',
-      transaction_type: 'cash',
+      transaction_type: data.payment_type,
       amount: data.amount,
+      transactionId: data.transactionId
     });
     await this.producerService.produce({
-      topic: 'account_update_balance',
+      topic: topic,
       messages: [
         {
-          value: JSON.stringify({
-            account_number: data.account_number,
-            old_balance: data.balance,
-            new_balance: Number(data.balance) + Number(data.amount),
-          }),
+          value: JSON.stringify(
+            data
+          ),
         },
       ],
     });
@@ -51,5 +65,21 @@ export class DepositService {
   async depositProcessSuccess(data: IDepositProcessSuccess) {
     console.log('deposit success', data);
     return data;
+  }
+
+  async depositProcessFailed(data: any) {
+    try {
+      const deposit = await this.depositRepository.delete({ transactionId: data.transactionId })
+      await this.producerService.produce({
+        topic: "transfer_account_update_balance_failed",
+        messages: [
+          {
+            value: JSON.stringify(data)
+          }
+        ]
+      })
+    } catch (error) {
+
+    }
   }
 }

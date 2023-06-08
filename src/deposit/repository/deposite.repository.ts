@@ -27,6 +27,7 @@ export class DepositRepository extends Repository<Deposit> {
         new_balance: depositData.new_balance,
         transaction_type: depositData.transaction_type,
         account_number: depositData.account_number,
+        transactionId: depositData.transactionId
       });
       return await this.depositRepository.save(createDeposit);
     } catch (error) {

@@ -29,6 +29,9 @@ export class Deposit {
   @Column()
   account_number: string;
 
+  @Column({ type: 'uuid', name: 'transaction_id', nullable: true })
+  transactionId: string;
+
   @CreateDateColumn()
   created_date: Date;
 
